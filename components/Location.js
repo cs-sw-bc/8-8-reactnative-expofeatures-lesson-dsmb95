@@ -8,7 +8,7 @@ import {
   StyleSheet,
   SafeAreaView,
 } from 'react-native';
-// import * as Location from 'expo-location';
+import * as Location from 'expo-location';
 
 // ─── CONFIG ──────────────────────────────────────────────────────────────────
 
@@ -47,18 +47,41 @@ export default function LocationScreen() {
     // TODO 1: Request foreground location permission using expo-location.
     // If permission is not granted, call setError() with a message and return early.
     // Docs: https://docs.expo.dev/versions/latest/sdk/location/
+    
+    let { status } = await Location.requestForegroundPermissionsAsync();
+    
+    if (status !== 'granted') {
+      setError('Permission to access location was denied');
+      return;
+    }
 
+    let fetchedLocation = await Location.getCurrentPositionAsync({});
+    console.log(fetchedLocation);
+    setLocation(fetchedLocation.coords);
 
     // TODO 2: Get the device's current GPS position.
     // Destructure latitude and longitude from position.coords.
     // Then call setLocation({ latitude, longitude }) to display the coordinates.
+    
+    // const { latitude, longitude } = fetchedLocation.coords;
+    // setLocation({ latitude, longitude });
 
 
     // TODO 3: Build the Overpass query using buildQuery(latitude, longitude).
     // Fetch from: https://overpass-api.de/api/interpreter?data=QUERY
     // Hint: use encodeURIComponent() to safely include the query in the URL.
     // Parse the response as JSON.
-
+    try {
+      let overpassQuery = buildQuery(fetchedLocation.coords.latitude, fetchedLocation.coords.longitude);
+      // console.log(encodeURIComponent(overpassQuery));
+      const data = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(overpassQuery)}`);
+      const result = await data.json();
+      const named = result.elements.filter((el) => el.tags?.name);
+      setRestaurants(named);
+      // console.log(named)
+    } catch (err) {
+      setError(err)
+    }
 
     // TODO 4: Filter data.elements to only include restaurants that have a name tag.
     // Hint: use .filter() and optional chaining (?.)
@@ -75,22 +98,26 @@ export default function LocationScreen() {
       <View style={styles.card}>
 
         {/* TODO 5: Display the restaurant name using tags.name */}
-
+        <Text style={styles.restaurantName}>{tags.name}</Text>
 
         {/* TODO 6: Conditionally display the cuisine type using tags.cuisine.
             Use the styles.cuisine style. Only render this if cuisine exists. */}
+        {tags.cuisine && <Text style={styles.cuisine}>{tags.cuisine}</Text>}
 
 
         {/* TODO 7: Display the formatted address using the formatAddress() helper.
             Use the styles.address style. */}
+        <Text style={styles.address}>{formatAddress(tags)}</Text>
 
 
         {/* TODO 8: Conditionally display opening hours using tags.opening_hours.
             Use the styles.hours style and add a 🕐 emoji. */}
+        {tags.opening_hours && <Text style={styles.hours}>🕐 5{tags.opening_hours}</Text>}
 
 
         {/* TODO 9: Conditionally display the phone number using tags.phone.
             Use the styles.phone style and add a 📞 emoji. */}
+        {tags.phone && <Text style={styles.phone}>📞 {tags.phone}</Text>}
 
       </View>
     );

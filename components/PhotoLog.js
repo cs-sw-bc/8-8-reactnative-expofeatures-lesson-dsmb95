@@ -6,30 +6,43 @@ import {
   TouchableOpacity,
   StyleSheet,
   SafeAreaView,
+  FlatList
 } from 'react-native';
 
 // TODO 1: Import ImagePicker from 'expo-image-picker'
 // Docs: https://docs.expo.dev/versions/latest/sdk/imagepicker/
+import * as ImagePicker from 'expo-image-picker';
 
 
 // ─── COMPONENT ───────────────────────────────────────────────────────────────
 
 export default function PhotoScreen() {
-  const [photo, setPhoto] = useState(null);
+  const [photo, setPhoto] = useState([]);
 
   // TODO 2: Set up the camera permission hook using ImagePicker.useCameraPermissions()
-
+  const [status, requestPermission] = ImagePicker.useCameraPermissions();
 
   const takePhoto = async () => {
     // TODO 3: Request permission if not already granted.
     // Check permission?.granted — if false, call requestPermission().
     // If still not granted, return early.
 
+    if (!status?.granted) {
+      const { status } = await requestPermission();
+      if (!status?.granted) {
+        return;
+      }
+    }
+
 
     // TODO 4: Open the system camera.
     // const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
     // If the user did not cancel, call setPhoto(result.assets[0]);
-
+    const result = await ImagePicker.launchCameraAsync({ quality: 0.8 });
+    console.log(result);
+    if (!result.canceled) {
+      setPhoto((currentPhotos) =>[...currentPhotos, result.assets[0]]);
+    }
   };
 
   return (
@@ -37,12 +50,11 @@ export default function PhotoScreen() {
       <Text style={styles.title}>📷 Camera</Text>
 
       {/* Show photo if taken, otherwise show the button */}
-      {photo ? (
+      {photo.length > 0 ? (
         <View>
           {/* TODO 5: Display the photo using <Image source={{ uri: photo.uri }} style={styles.image} /> */}
 
-
-          <TouchableOpacity style={styles.retakeButton} onPress={() => setPhoto(null)}>
+          <TouchableOpacity style={styles.retakeButton} onPress={takePhoto}>
             <Text style={styles.retakeText}>Retake</Text>
           </TouchableOpacity>
         </View>
@@ -51,6 +63,12 @@ export default function PhotoScreen() {
           <Text style={styles.buttonText}>Take Photo</Text>
         </TouchableOpacity>
       )}
+      
+      <FlatList
+        data={photo}
+        renderItem={({item}) => (<Image source={{ uri: item.uri }} style={[styles.image, {paddingTop: 10}]} />)}
+      />
+
     </SafeAreaView>
   );
 }
